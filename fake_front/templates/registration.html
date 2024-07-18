@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registration</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 400px;
+      padding: 40px;
+      background-color: #fff;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4">Registration</h2>
+    <h2 class="text-center mb-4">genyukvlad@yandex.ru ibhubfgalimremne</h2>
+    <form id="registration-form" action="javascript:void(0);">
+      <div class="form-group">
+        <label for="username">Email login:</label>
+        <input type="email" class="form-control" id="username" name="email_login" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Email password:</label>
+        <input type="password" class="form-control" id="password" name="email_password" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Register</button>
+    </form>
+  </div>
+
+  <script>
+      document.getElementById('registration-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      var formData = new FormData(this);
+
+      fetch('http://127.0.0.1:8000/core/email_app/v1/register/', {
+        method: 'POST',
+        body: formData
+      })
+      .then(async response => {
+        if (response.status === 200 || response.status === 201) {
+          const data = await response.json();
+          localStorage.setItem('email_login', formData.get('email_login'));
+          localStorage.setItem('email_password', formData.get('email_password'));
+          localStorage.setItem('user_id', data.user.id);
+          window.location.href = 'load_emails';
+        } else {
+          throw new Error(`HTTP error ${response.status}`);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Registration failed');
+      });
+  });
+  </script>
+
+</body>
+</html>

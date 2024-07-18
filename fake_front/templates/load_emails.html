@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Example</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .progress-container {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 5px;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            border-radius: 5px;
+            transition: width 0.5s ease-in-out;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container my-5 text-center">
+        <h1 class="mb-4">WebSocket Example</h1>
+        <h2 id='email_login' class="mb-4"></h2>
+        <h2 id='email_provider' class="mb-4"></h2>
+        <br>
+        <button id="load-btn" type="button" class="btn btn-primary" onclick="sendMessage()">Send</button>
+        <br>
+        <br>
+        <h2>Progress Bar</h2>
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar">0%</div>
+        </div>
+        <br>
+        <button id="logout-btn" class="btn btn-danger">LOGOUT</button>
+        <button class="btn btn-info" id="return-btn">See all emails</button>
+
+        <br>
+        <br>
+        <br>
+        <br>
+        <div id="messages" class="border p-4"></div>
+    </div>
+
+</body>
+<script>
+        let email_login = localStorage.getItem('email_login');
+        let email_password = localStorage.getItem('email_password');
+        let userID = localStorage.getItem('user_id');
+
+        if (!email_login || !email_password) {
+            window.location.href = 'register';
+        }
+
+        let imap_provider = getImapProvider(email_login);
+
+        function getImapProvider(email) {
+          const [, domain] = email.split('@');
+
+          if (domain.endsWith('yandex.ru')) {
+            return 'imap.yandex.ru';
+          } else if (domain.endsWith('gmail.com')) {
+            return 'imap.gmail.com';
+          } else if (domain.endsWith('mail.ru')) {
+            return 'imap.mail.ru';
+          } else {
+            return 'Unknown IMAP provider';
+          }
+        }
+
+        document.getElementById('load-btn').innerHTML = 'Load messages from ' + getImapProvider(email_login);
+        document.getElementById('email_login').innerHTML = 'Hello, ' + email_login;
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('email_login');
+            window.location.reload();
+        });
+
+        const serverUrl = 'ws://localhost:8000/ws/email/';
+        let socket;
+        var messagesCount = null;
+        let reconnectInterval = 1000; // 1 second
+
+        function initializeWebSocket() {
+            socket = new WebSocket(serverUrl);
+
+            socket.onopen = function() {
+                console.log('WebSocket connection opened');
+                updateMessage('WebSocket connection opened');
+            };
+
+            socket.onmessage = function(event) {
+                const [messageType, messageData] = JSON.parse(event.data);
+                switch (messageType) {
+                    case "progress_bar":
+                    if (!messageData.add){
+                        updateProgressBar();
+                    } else {
+                        messagesCount = messageData.messages_count;
+                        updateProgressBar();
+                    };
+                    break;
+                    default:
+                      console.log("Unknown message type:", messageType);
+                  }
+            };
+
+            socket.onclose = function() {
+                console.log('WebSocket connection closed');
+                updateMessage('WebSocket connection closed');
+                setTimeout(reconnect, reconnectInterval);
+            };
+
+            socket.onerror = function(event) {
+                console.error('WebSocket error:', event);
+                updateMessage('WebSocket error');
+            };
+        }
+
+        function reconnect() {
+            console.log('Attempting to reconnect...');
+            updateMessage('Attempting to reconnect...');
+            initializeWebSocket();
+        }
+
+        function sendMessage() {
+            progressValue = 0;
+            const emailProviderInput = document.getElementById('email-provider');
+            const emailLoginInput = document.getElementById('email-login');
+            const emailPasswordInput = document.getElementById('email-password');
+
+            const emailProvider = imap_provider;
+            const emailLogin = email_login;
+            const emailPassword = email_password;
+
+            if (emailProvider && emailLogin && emailPassword) {
+                if (socket.readyState === WebSocket.OPEN) {
+                    const message = {
+                        email_provider: emailProvider,
+                        email_login: emailLogin,
+                        email_password: emailPassword,
+                        user_id: userID
+                    };
+                    socket.send(JSON.stringify(message));
+                    updateMessage(`Sent message: ${JSON.stringify(message)}`);
+                } else {
+                    updateMessage('WebSocket connection is not active. Unable to send message.');
+                }
+            }
+        }
+
+        function updateMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = message;
+        }
+
+        var progressBar = document.getElementById("progress-bar");
+        var progressValue = 0;
+        var maxProgress = 100;
+
+        function updateProgressBar() {
+            if (!messagesCount) {
+                messagesCount = 100;
+            }
+            if (progressValue < maxProgress) {
+                progressValue += (1 / messagesCount) * 100;
+                progressBar.style.width = progressValue + "%";
+                progressBar.textContent = Math.ceil(Math.min(progressValue, maxProgress).toFixed(2)) + "%";
+            }
+        }
+        document.getElementById('return-btn').addEventListener('click', () => {
+            window.location.href = 'all_emails';
+        });
+
+        initializeWebSocket();
+    </script>
+</html>

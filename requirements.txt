@@ -1,0 +1,15 @@
+Django==5.0.2
+djangorestframework==3.14.0
+channels==4.0.0
+daphne==4.0.0
+channels-redis==4.1.0
+python-dotenv
+django-cors-headers
+django-debug-toolbar
+django-cleanup
+drf-yasg
+whitenoise
+pydantic
+fastapi
+starlette
+imapclient
